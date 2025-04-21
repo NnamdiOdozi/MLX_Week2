@@ -11,3 +11,4 @@ scikit-learn>=0.24.0,<1.4.0
 wandb
 datasets
 transformers
+python-dotenv
