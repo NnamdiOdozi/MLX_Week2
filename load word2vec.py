@@ -72,4 +72,14 @@ if os.path.exists(word_to_idx_path):
 else:
     print(f"Word to index mapping file not found at {word_to_idx_path}")
 
-# Now you can use these for your subsequent tasks
+# Extracting the Embedding layer from the model
+# Load the model
+model_path = "./downloaded_model/2025_04_18__14_41_55.5.cbow.pth"
+model_dict = torch.load(model_path, map_location=torch.device('cpu'))
+
+# Extract the embeddings
+embeddings = model_dict["emb.weight"]
+
+# Save just the embeddings for future use
+torch.save(embeddings, "./downloaded_model/embeddings.pt")
+print(f"Embeddings saved, shape: {embeddings.shape}")
