@@ -1,7 +1,7 @@
 import torch
 import pandas as pd
 import numpy as np
-from tokenizer import preprocess  # Import your existing tokenizer's preprocess function
+from tokenizer import preprocess, preprocess_for_inference # Import your existing tokenizer's preprocess function
 
 def load_vocabulary(vocab_path):
     """Load the vocabulary mapping from CSV file"""
@@ -18,7 +18,7 @@ def load_embeddings(embeddings_path):
 def text_to_embeddings(text, word_to_idx, embeddings, unknown_token_id=0):
     """Convert text to token embeddings"""
     # Tokenize the text
-    tokens = preprocess(text)
+    tokens = preprocess_for_inference(text)
     
     # Convert tokens to indices
     indices = []

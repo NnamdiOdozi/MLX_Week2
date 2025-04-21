@@ -29,6 +29,10 @@ var/
 .coverage
 htmlcov/
 
+#Pickle
+*.pkl
+
+
 # PyTorch
 *.pt
 *.pth
@@ -71,6 +75,7 @@ data/
 !data/.gitkeep
 !models/.gitkeep
 saved_models/
+text*
 
 # Streamlit
 secrets.toml

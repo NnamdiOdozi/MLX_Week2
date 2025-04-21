@@ -36,6 +36,24 @@ def preprocess(text: str) -> list[str]:
   return words
 
 
+def preprocess_for_inference(text):
+    """Modified preprocessing function that doesn't filter by frequency"""
+    text = text.lower()
+    text = text.replace('.',  ' <PERIOD> ')
+    text = text.replace(',',  ' <COMMA> ')
+    text = text.replace('"',  ' <QUOTATION_MARK> ')
+    text = text.replace(';',  ' <SEMICOLON> ')
+    text = text.replace('!',  ' <EXCLAMATION_MARK> ')
+    text = text.replace('?',  ' <QUESTION_MARK> ')
+    text = text.replace('(',  ' <LEFT_PAREN> ')
+    text = text.replace(')',  ' <RIGHT_PAREN> ')
+    text = text.replace('--', ' <HYPHENS> ')
+    text = text.replace('?',  ' <QUESTION_MARK> ')
+    text = text.replace(':',  ' <COLON> ')
+    words = text.split()
+    # Remove the frequency filtering step that was in the original preprocess
+    return words
+
 #
 #
 #
