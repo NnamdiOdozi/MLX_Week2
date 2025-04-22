@@ -6,7 +6,11 @@ from datasets import load_dataset
 import numpy as np
 import pandas as pd
 import transformers
-
+import torch.nn.functional as F
+import math
+from collections import Counter
+from sklearn.feature_extraction.text import TfidfVectorizer
+import rank_bm25
 
 # Initialize wandb and login (if not already logged in)
 # wandb.login()  # Uncomment if you need to login
@@ -107,6 +111,40 @@ def text_to_embeddings(text, word_to_idx, embeddings, unknown_token_id=0):
     token_embeddings = embeddings[indices_tensor]
     
     return token_embeddings
+
+
+# Function to calculate cosine similarity between two embeddings
+def calc_cosine_sim(emb1, emb2):
+    # Handle empty embeddings
+    if emb1.shape[0] == 0 or emb2.shape[0] == 0:
+        return 0.0
+    
+    a = emb1.mean(dim=0)
+    b = emb2.mean(dim=0)
+    return F.cosine_similarity(a.unsqueeze(0), b.unsqueeze(0)).item()
+
+# Function to process a single row and return similarities
+def calculate_similarities(row, word_to_idx, embeddings):
+    # Get embeddings
+    query_emb = text_to_embeddings(row['query'], word_to_idx, embeddings)
+    pos_emb = text_to_embeddings(row['positive_passage'], word_to_idx, embeddings) 
+    neg_emb = text_to_embeddings(row['negative_passage'], word_to_idx, embeddings)
+    
+    # Calculate similarities
+    query_pos_sim = calc_cosine_sim(query_emb, pos_emb)
+    query_neg_sim = calc_cosine_sim(query_emb, neg_emb)
+    pos_neg_sim = calc_cosine_sim(pos_emb, neg_emb)
+    
+    return pd.Series({
+        'query_pos_sim': query_pos_sim, 
+        'query_neg_sim': query_neg_sim, 
+        'pos_neg_sim': pos_neg_sim
+    })
+
+
+
+
+
 
 
 def main():
