@@ -6,7 +6,7 @@ import glob
 def upload_model_to_wandb(model_dir):
     """Upload model files from the specified directory to Weights & Biases"""
     # Initialize a new W&B run
-    wandb.init(project="word2vec-finetuning", name="word2vec-hackernews")
+    wandb.init(project="twintowers_finetuning", name="twintowers-search")
     
     # Look for model files
     word2vec_file = os.path.join(model_dir, "word2vec_text8_tiny_improved.txt")
