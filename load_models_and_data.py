@@ -125,21 +125,54 @@ def calc_cosine_sim(emb1, emb2):
 
 # Function to process a single row and return similarities
 def calculate_similarities(row, word_to_idx, embeddings):
+    """Convert text to token embeddings and calculate similarities"""
     # Get embeddings
     query_emb = text_to_embeddings(row['query'], word_to_idx, embeddings)
     pos_emb = text_to_embeddings(row['positive_passage'], word_to_idx, embeddings) 
     neg_emb = text_to_embeddings(row['negative_passage'], word_to_idx, embeddings)
     
-    # Calculate similarities
-    query_pos_sim = calc_cosine_sim(query_emb, pos_emb)
-    query_neg_sim = calc_cosine_sim(query_emb, neg_emb)
-    pos_neg_sim = calc_cosine_sim(pos_emb, neg_emb)
+    # Calculate average embeddings
+    avg_query_emb = query_emb.mean(dim=0).detach().numpy() if query_emb.shape[0] > 0 else np.zeros(embeddings.shape[1])
+    avg_pos_emb = pos_emb.mean(dim=0).detach().numpy() if pos_emb.shape[0] > 0 else np.zeros(embeddings.shape[1])
+    avg_neg_emb = neg_emb.mean(dim=0).detach().numpy() if neg_emb.shape[0] > 0 else np.zeros(embeddings.shape[1])
     
-    return pd.Series({
-        'query_pos_sim': query_pos_sim, 
-        'query_neg_sim': query_neg_sim, 
+    # Calculate similarities
+    if query_emb.shape[0] > 0 and pos_emb.shape[0] > 0:
+        query_pos_sim = F.cosine_similarity(
+            query_emb.mean(dim=0).unsqueeze(0), 
+            pos_emb.mean(dim=0).unsqueeze(0)
+        ).item()
+    else:
+        query_pos_sim = 0.0
+        
+    if query_emb.shape[0] > 0 and neg_emb.shape[0] > 0:
+        query_neg_sim = F.cosine_similarity(
+            query_emb.mean(dim=0).unsqueeze(0), 
+            neg_emb.mean(dim=0).unsqueeze(0)
+        ).item()
+    else:
+        query_neg_sim = 0.0
+    
+    if pos_emb.shape[0] > 0 and neg_emb.shape[0] > 0:
+        pos_neg_sim = F.cosine_similarity(
+            pos_emb.mean(dim=0).unsqueeze(0), 
+            neg_emb.mean(dim=0).unsqueeze(0)
+        ).item()
+    else:
+        pos_neg_sim = 0.0
+    
+    # Create a Series with both similarities and average embeddings
+    result = pd.Series({
+        'avg_query_embedding': avg_query_emb,
+        'avg_pos_embedding': avg_pos_emb,
+        'avg_neg_embedding': avg_neg_emb,
+        'query_pos_sim': query_pos_sim,
+        'query_neg_sim': query_neg_sim,
         'pos_neg_sim': pos_neg_sim
+        
     })
+    
+    return result
 
 
 
