@@ -26,7 +26,6 @@ def preprocess(text: str) -> list[str]:
   text = text.replace('(',  ' <LEFT_PAREN> ')
   text = text.replace(')',  ' <RIGHT_PAREN> ')
   text = text.replace('--', ' <HYPHENS> ')
-  text = text.replace('?',  ' <QUESTION_MARK> ')
   text = text.replace(':',  ' <COLON> ')
   words = text.split()
   print("Number of words before filtering:", len(words))
