@@ -29,8 +29,11 @@ def preprocess(text: str) -> list[str]:
   text = text.replace('?',  ' <QUESTION_MARK> ')
   text = text.replace(':',  ' <COLON> ')
   words = text.split()
+  print("Number of words before filtering:", len(words))
   stats = collections.Counter(words)
   words = [word for word in words if stats[word] > 5]
+  print("Number of words after filtering:", len(words))
+
   return words
 
 
@@ -43,6 +46,9 @@ def create_lookup_tables(words: list[str]) -> tuple[dict[str, int], dict[int, st
   int_to_vocab = {ii+1: word for ii, word in enumerate(vocab)}
   int_to_vocab[0] = '<PAD>'
   vocab_to_int = {word: ii for ii, word in int_to_vocab.items()}
+  print("Number of words in vocab:", len(vocab))
+  print("Number of words in vocab_to_int:", len(vocab_to_int))
+  print("Number of words in int_to_vocab:", len(int_to_vocab))
   return vocab_to_int, int_to_vocab
 
 #
