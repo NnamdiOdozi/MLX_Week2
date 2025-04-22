@@ -179,9 +179,11 @@ def train_model(train_loader, val_loader, output_dim, lr=1e-3, epochs=10, checkp
             'val_loss': avg_val_loss,
             'hyperparams': {
                 'output_dim': output_dim,
-                'lr': lr,
-    }
-}       if log_wandb:
+                'lr': lr
+            }
+        }       
+        
+        if log_wandb:
             wandb.log({
                 "epoch": epoch + 1,
                 "train_loss": avg_train_loss,
