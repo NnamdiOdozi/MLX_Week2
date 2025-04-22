@@ -34,26 +34,6 @@ def preprocess(text: str) -> list[str]:
   return words
 
 
-d
-
-#
-#
-#
-
-r = requests.get('https://huggingface.co/datasets/ardMLX/text8/resolve/main/text8')
-with open('text8', 'wb') as f: f.write(r.content)
-with open('text8') as f: text8: str = f.read()
-
-corpus: list[str] = preprocess(text8)
-print(type(corpus)) # <class 'list'>
-print(len(corpus))  # 16,680,599
-print(corpus[:7])   # ['anarchism', 'originated', 'as', 'a', 'term', 'of', 'abuse']
-
-
-# once saved, check content with: head -c 100 corpus.json
-with open('corpus.pkl', 'wb') as f: pickle.dump(corpus, f)
-
-
 #
 #
 #
@@ -65,28 +45,40 @@ def create_lookup_tables(words: list[str]) -> tuple[dict[str, int], dict[int, st
   vocab_to_int = {word: ii for ii, word in int_to_vocab.items()}
   return vocab_to_int, int_to_vocab
 
+#
+#
+#
+def main():
+  # Download and process text8 dataset
+  r = requests.get('https://huggingface.co/datasets/ardMLX/text8/resolve/main/text8')
+  with open('text8', 'wb') as f: f.write(r.content)
+  with open('text8') as f: text8: str = f.read()
 
-#
-#
-#
-words_to_ids, ids_to_words = create_lookup_tables(corpus)
-tokens = [words_to_ids[word] for word in corpus]
-print(type(tokens)) # <class 'list'>
-print(len(tokens))  # 16,680,599
-print(tokens[:7])   # [5234, 3081, 12, 6, 195, 2, 3134]
+  corpus: list[str] = preprocess(text8)
+  print(type(corpus)) # <class 'list'>
+  print(len(corpus))  # 16,680,599
+  print(corpus[:7])   # ['anarchism', 'originated', 'as', 'a', 'term', 'of', 'abuse']
+
+  # once saved, check content with: head -c 100 corpus.json
+  with open('corpus.pkl', 'wb') as f: pickle.dump(corpus, f)
+
+  # Create lookup tables
+  words_to_ids, ids_to_words = create_lookup_tables(corpus)
+  tokens = [words_to_ids[word] for word in corpus]
+  print(type(tokens)) # <class 'list'>
+  print(len(tokens))  # 16,680,599
+  print(tokens[:7])   # [5234, 3081, 12, 6, 195, 2, 3134]
+
+  # Print some examples
+  print(ids_to_words[5234])        # anarchism
+  print(words_to_ids['anarchism']) # 5234
+  print(words_to_ids['have'])      # 3081
+  print(len(words_to_ids))         # 63,642
+
+  # Save lookup tables
+  with open('tkn_words_to_ids.pkl', 'wb') as f: pickle.dump(words_to_ids, f)
+  with open('tkn_ids_to_words.pkl', 'wb') as f: pickle.dump(ids_to_words, f)
 
 
-#
-#
-#
-print(ids_to_words[5234])        # anarchism
-print(words_to_ids['anarchism']) # 5234
-print(words_to_ids['have'])      # 3081
-print(len(words_to_ids))         # 63,642
-
-
-#
-#
-#
-with open('tkn_words_to_ids.pkl', 'wb') as f: pickle.dump(words_to_ids, f)
-with open('tkn_ids_to_words.pkl', 'wb') as f: pickle.dump(ids_to_words, f)
+if __name__ == "__main__":
+  main()
