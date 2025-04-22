@@ -137,38 +137,38 @@ def calculate_similarities(row, word_to_idx, embeddings):
     avg_neg_emb = neg_emb.mean(dim=0).detach().numpy() if neg_emb.shape[0] > 0 else np.zeros(embeddings.shape[1])
     
     # Calculate similarities
-    if query_emb.shape[0] > 0 and pos_emb.shape[0] > 0:
-        query_pos_sim = F.cosine_similarity(
-            query_emb.mean(dim=0).unsqueeze(0), 
-            pos_emb.mean(dim=0).unsqueeze(0)
-        ).item()
-    else:
-        query_pos_sim = 0.0
+    # if query_emb.shape[0] > 0 and pos_emb.shape[0] > 0:
+    #     query_pos_sim = F.cosine_similarity(
+    #         query_emb.mean(dim=0).unsqueeze(0), 
+    #         pos_emb.mean(dim=0).unsqueeze(0)
+    #     ).item()
+    # else:
+    #     query_pos_sim = 0.0
         
-    if query_emb.shape[0] > 0 and neg_emb.shape[0] > 0:
-        query_neg_sim = F.cosine_similarity(
-            query_emb.mean(dim=0).unsqueeze(0), 
-            neg_emb.mean(dim=0).unsqueeze(0)
-        ).item()
-    else:
-        query_neg_sim = 0.0
+    # if query_emb.shape[0] > 0 and neg_emb.shape[0] > 0:
+    #     query_neg_sim = F.cosine_similarity(
+    #         query_emb.mean(dim=0).unsqueeze(0), 
+    #         neg_emb.mean(dim=0).unsqueeze(0)
+    #     ).item()
+    # else:
+    #     query_neg_sim = 0.0
     
-    if pos_emb.shape[0] > 0 and neg_emb.shape[0] > 0:
-        pos_neg_sim = F.cosine_similarity(
-            pos_emb.mean(dim=0).unsqueeze(0), 
-            neg_emb.mean(dim=0).unsqueeze(0)
-        ).item()
-    else:
-        pos_neg_sim = 0.0
+    # if pos_emb.shape[0] > 0 and neg_emb.shape[0] > 0:
+    #     pos_neg_sim = F.cosine_similarity(
+    #         pos_emb.mean(dim=0).unsqueeze(0), 
+    #         neg_emb.mean(dim=0).unsqueeze(0)
+    #     ).item()
+    # else:
+    #     pos_neg_sim = 0.0
     
     # Create a Series with both similarities and average embeddings
     result = pd.Series({
         'avg_query_embedding': avg_query_emb,
         'avg_pos_embedding': avg_pos_emb,
         'avg_neg_embedding': avg_neg_emb,
-        'query_pos_sim': query_pos_sim,
-        'query_neg_sim': query_neg_sim,
-        'pos_neg_sim': pos_neg_sim
+        #'query_pos_sim': query_pos_sim,
+        #'query_neg_sim': query_neg_sim,
+        #'pos_neg_sim': pos_neg_sim
         
     })
     
