@@ -30,7 +30,7 @@ def preprocess(text: str) -> list[str]:
   words = text.split()
   print("Number of words before filtering:", len(words))
   stats = collections.Counter(words)
-  words = [word for word in words if stats[word] > 5]
+  words = [word for word in words if stats[word] > 10]
   print("Number of words after filtering:", len(words))
 
   return words
