@@ -1,0 +1,42 @@
+{
+  "os": "Linux-6.5.0-28-generic-x86_64-with-glibc2.35",
+  "python": "CPython 3.10.12",
+  "startedAt": "2025-04-23T16:14:51.255581Z",
+  "program": "/root/MLX_Week2/main.ipynb",
+  "codePath": "main.ipynb",
+  "git": {
+    "remote": "https://github.com/NnamdiOdozi/MLX_Week2",
+    "commit": "be5c32299bcea71bb536fec07294368ced84c4d2"
+  },
+  "email": "nnamdi.odozi@googlemail.com",
+  "root": "/root/MLX_Week2",
+  "host": "85c73fa34230",
+  "executable": "/root/MLX_Week2/mlx_env/bin/python",
+  "codePathLocal": "main.ipynb",
+  "cpu_count": 40,
+  "cpu_count_logical": 80,
+  "gpu": "Tesla V100-SXM2-16GB",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "171798691840",
+      "used": "11578646528"
+    }
+  },
+  "memory": {
+    "total": "270035775488"
+  },
+  "cpu": {
+    "count": 40,
+    "countLogical": 80
+  },
+  "gpu_nvidia": [
+    {
+      "name": "Tesla V100-SXM2-16GB",
+      "memoryTotal": "17179869184",
+      "cudaCores": 5120,
+      "architecture": "Volta"
+    }
+  ],
+  "cudaVersion": "12.4"
+}

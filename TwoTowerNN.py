@@ -68,6 +68,10 @@ class TripletEmbeddingDataset(Dataset):
         }
 
 
+#class MyGRU
+
+
+
 # Function to train a model with specific hyperparameters
 def train_model(train_loader, val_loader, output_dim, lr=1e-3, epochs=10, checkpoint_dir="checkpoints", log_wandb=True):
     
@@ -199,7 +203,7 @@ def train_model(train_loader, val_loader, output_dim, lr=1e-3, epochs=10, checkp
     return best_val_loss, qryTower, docTower
 
 # Main hyperparameter tuning without cross-validation
-def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 256, 512], epochs=10):
+def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 256, 512], epochs=10, log_wandb=True):
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     # Initialize W&B for the entire tuning process
     wandb.init(
@@ -264,17 +268,9 @@ def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 2
             wandb.log({
                 "output_dim": output_dim,
                 "batch_size": batch_size,
-<<<<<<< HEAD
-                "avg_cv_loss": avg_cv_loss
-                
-=======
                 "val_loss": val_loss
->>>>>>> d8e694c729ea0e316f52d2a0779d0e55a03b85be
             })
-
-            for i, loss in enumerate(fold_losses):
-                wandb.log({"fold_loss": loss, "fold": i})
-            
+          
             # Record result
             results.append({
                 'output_dim': output_dim,
@@ -331,15 +327,22 @@ def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 2
             'batch_size': best_result['batch_size']
         }
     }
-<<<<<<< HEAD
-    torch.save(final_model, f"checkpoints/final_model/final_model_{timestamp}.pt")
-=======
     
     final_model_path = f"{final_checkpoint_dir}/final_model_{timestamp}.pt"
     torch.save(final_model, final_model_path)
     print(f"Final model saved at: {final_model_path}")
->>>>>>> d8e694c729ea0e316f52d2a0779d0e55a03b85be
 
+
+    # Log final model to W&B
+    if log_wandb:
+        final_model_artifact = wandb.Artifact(
+            name=f"final_model_{timestamp}", 
+            type="model",
+            description=f"Final model trained on combined data with output_dim={best_result['output_dim']}, batch_size={best_result['batch_size']}"
+        )
+        
+        final_model_artifact.add_file(final_model_path)
+        wandb.log_artifact(final_model_artifact)
     # Before returning, finish the W&B run
     wandb.finish()
     
