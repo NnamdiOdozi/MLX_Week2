@@ -283,7 +283,7 @@ def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 2
                     val_loader, 
                     output_dim=output_dim,
                     epochs=epochs,
-                    checkpoint_dir=checkpoint_dir
+                    checkpoint_dir=checkpoint_dir,
                     log_wandb=True  # Disable W&B logging for fold training
                 )
                 
