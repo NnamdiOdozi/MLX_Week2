@@ -1,6 +1,7 @@
 config*
 mlx_env
 data/
+downloaded_model/
 __pycache__
 
 # Python
@@ -75,7 +76,7 @@ data/
 !models/.gitkeep
 saved_models/
 text*
-
+*.txt
 # Streamlit
 secrets.toml
 

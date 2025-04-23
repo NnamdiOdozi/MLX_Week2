@@ -203,7 +203,7 @@ def train_model(train_loader, val_loader, output_dim, lr=1e-3, epochs=10, checkp
     return best_val_loss, qryTower, docTower
 
 # Main hyperparameter tuning without cross-validation
-def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 256, 512], epochs=10, log_wandb=True):
+def run_hyperparameter_tuning(df, output_dims=[128], batch_size=[512], epochs=10, log_wandb=True):
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     # Initialize W&B for the entire tuning process
     wandb.init(
@@ -211,7 +211,7 @@ def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 2
         name=f"hyperparameter-tuning-{timestamp}",
         config={
             "output_dims": output_dims,
-            "batch_sizes": batch_sizes,
+            "batch_size": batch_size,
             "epochs": epochs
         }
     )
@@ -227,7 +227,7 @@ def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 2
     
     # Loop through hyperparameter combinations
     for output_dim in output_dims:
-        for batch_size in batch_sizes:
+        for batch_size in batch_size:
             print(f"\n\n{'-'*50}")
             print(f"Training with output_dim={output_dim}, batch_size={batch_size}")
             print(f"{'-'*50}")
