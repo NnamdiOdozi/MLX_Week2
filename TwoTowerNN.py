@@ -205,7 +205,7 @@ def train_model(train_loader, val_loader, output_dim, lr=1e-3, epochs=10, checkp
     return best_val_loss, qryTower, docTower
 
 # 4. Main hyperparameter tuning with cross-validation
-def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 256, 512], n_folds=5, epochs=10):
+def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 256, 512], epochs=10):
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     # Initialize W&B for the entire tuning process
     wandb.init(
@@ -214,7 +214,6 @@ def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 2
         config={
             "output_dims": output_dims,
             "batch_sizes": batch_sizes,
-            "n_folds": n_folds,
             "epochs": epochs
         }
     )
@@ -225,8 +224,6 @@ def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 2
     # Create the full dataset
     full_dataset = TripletEmbeddingDataset(train_df)
     
-    # Set up k-fold cross-validation
-    kf = KFold(n_splits=n_folds, shuffle=True, random_state=42)
     
     # Results tracking
     results = []
