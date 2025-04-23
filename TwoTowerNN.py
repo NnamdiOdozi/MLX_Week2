@@ -286,9 +286,12 @@ def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 2
             wandb.log({
                 "output_dim": output_dim,
                 "batch_size": batch_size,
-                "avg_cv_loss": avg_cv_loss,
-                "fold_losses": fold_losses
+                "avg_cv_loss": avg_cv_loss
+                
             })
+
+            for i, loss in enumerate(fold_losses):
+                wandb.log({"fold_loss": loss, "fold": i})
             
             # Record result
             results.append({
@@ -344,7 +347,7 @@ def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 2
             'batch_size': best_result['batch_size']
         }
     }
-    torch.save(final_model, "checkpoints/final_model/final_model.pt")
+    torch.save(final_model, f"checkpoints/final_model/final_model_{timestamp}.pt")
 
     # Before returning, finish the W&B run
     wandb.finish()

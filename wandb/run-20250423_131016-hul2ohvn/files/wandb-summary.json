@@ -1,0 +1,1 @@
+{"_step":101,"avg_cv_loss":0.05110099918902372,"batch_size":512,"learning_rate":6.25e-05,"_timestamp":1.7454150578650727e+09,"train_loss":0.05237574272638477,"_wandb":{"runtime":1240},"fold_losses":[0.051529796906306664,0.05067220147174078],"_runtime":1240.042178685,"epoch":20,"val_loss":0.10027930342435223,"output_dim":128}
