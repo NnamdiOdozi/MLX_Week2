@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.utils.data import Dataset, DataLoader,  SubsetRandomSampler
-from sklearn.model_selection import KFold, train_test_split
+from torch.utils.data import Dataset, DataLoader
+from sklearn.model_selection import train_test_split
 import os
 from tqdm import tqdm
 import numpy as np
@@ -68,10 +68,9 @@ class TripletEmbeddingDataset(Dataset):
         }
 
 
-# 3. Function to train a model with specific hyperparameters
+# Function to train a model with specific hyperparameters
 def train_model(train_loader, val_loader, output_dim, lr=1e-3, epochs=10, checkpoint_dir="checkpoints", log_wandb=True):
     
-      
     # Create models
     qryTower = QryTower(output_dim=output_dim)
     docTower = DocTower(output_dim=output_dim)
@@ -180,9 +179,6 @@ def train_model(train_loader, val_loader, output_dim, lr=1e-3, epochs=10, checkp
                 "learning_rate": optimizer.param_groups[0]['lr']
             })
         
-        # Save the latest checkpoint
-        #torch.save(checkpoint, f"{checkpoint_dir}/latest_checkpoint.pt")
-        
         # Save the best model (only if this is the best we've seen)
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
@@ -200,33 +196,27 @@ def train_model(train_loader, val_loader, output_dim, lr=1e-3, epochs=10, checkp
 
             print(f"New best model saved with validation loss: {best_val_loss:.4f}")
     
-
-
     return best_val_loss, qryTower, docTower
 
-# 4. Main hyperparameter tuning with cross-validation
-def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 256, 512], n_folds=5, epochs=10):
+# Main hyperparameter tuning without cross-validation
+def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 256, 512], epochs=10):
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     # Initialize W&B for the entire tuning process
     wandb.init(
         project="twin-tower-model",
-        name=f"hyperparameter-tuning {timestamp}",
+        name=f"hyperparameter-tuning-{timestamp}",
         config={
             "output_dims": output_dims,
             "batch_sizes": batch_sizes,
-            "n_folds": n_folds,
             "epochs": epochs
         }
     )
 
-    # First, create a train/test split
-    train_df, test_df = train_test_split(df, test_size=0.2, random_state=42)
+    # First, create train/val/test split (60/20/20)
+    train_df, temp_df = train_test_split(df, test_size=0.4, random_state=42)
+    val_df, test_df = train_test_split(temp_df, test_size=0.5, random_state=42)
     
-    # Create the full dataset
-    full_dataset = TripletEmbeddingDataset(train_df)
-    
-    # Set up k-fold cross-validation
-    kf = KFold(n_splits=n_folds, shuffle=True, random_state=42)
+    print(f"Data splits: Train={len(train_df)} | Validation={len(val_df)} | Test={len(test_df)}")
     
     # Results tracking
     results = []
@@ -238,56 +228,48 @@ def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 2
             print(f"Training with output_dim={output_dim}, batch_size={batch_size}")
             print(f"{'-'*50}")
             
-            # Cross validation
-            fold_losses = []
+            # Create datasets for this hyperparameter combination
+            train_dataset = TripletEmbeddingDataset(train_df)
+            val_dataset = TripletEmbeddingDataset(val_df)
             
-            for fold, (train_idx, val_idx) in enumerate(kf.split(np.arange(len(full_dataset)))):
-                print(f"\nFold {fold+1}/{n_folds}")
-                
-                # Create data samplers
-                train_sampler = SubsetRandomSampler(train_idx)
-                val_sampler = SubsetRandomSampler(val_idx)
-                
-                # Create data loaders
-                train_loader = DataLoader(
-                    full_dataset, 
-                    batch_size=batch_size, 
-                    sampler=train_sampler,
-                    num_workers=8,
-                    pin_memory=True
-                )
-                
-                val_loader = DataLoader(
-                    full_dataset, 
-                    batch_size=batch_size, 
-                    sampler=val_sampler,
-                    num_workers=2,
-                    pin_memory=True
-                )
-                
-                # Train the model and get validation loss
-                checkpoint_dir = f"checkpoints/dim{output_dim}_batch{batch_size}_fold{fold+1}_{timestamp}"
-                val_loss, _, _ = train_model(
-                    train_loader, 
-                    val_loader, 
-                    output_dim=output_dim,
-                    epochs=epochs,
-                    checkpoint_dir=checkpoint_dir,
-                    log_wandb=True  # Disable W&B logging for fold training
-                )
-                
-                fold_losses.append(val_loss)
+            # Create data loaders
+            train_loader = DataLoader(
+                train_dataset, 
+                batch_size=batch_size, 
+                shuffle=True,
+                num_workers=8,
+                pin_memory=True
+            )
             
-            # Calculate average loss across folds
-            avg_cv_loss = np.mean(fold_losses)
-            print(f"\nAverage CV loss for output_dim={output_dim}, batch_size={batch_size}: {avg_cv_loss:.4f}")
-
-            # Log the cross-validation results
+            val_loader = DataLoader(
+                val_dataset, 
+                batch_size=batch_size, 
+                shuffle=False,
+                num_workers=2,
+                pin_memory=True
+            )
+            
+            # Train the model and get validation loss
+            checkpoint_dir = f"checkpoints/dim{output_dim}_batch{batch_size}_{timestamp}"
+            val_loss, _, _ = train_model(
+                train_loader, 
+                val_loader, 
+                output_dim=output_dim,
+                epochs=epochs,
+                checkpoint_dir=checkpoint_dir,
+                log_wandb=True
+            )
+            
+            # Log the results
             wandb.log({
                 "output_dim": output_dim,
                 "batch_size": batch_size,
+<<<<<<< HEAD
                 "avg_cv_loss": avg_cv_loss
                 
+=======
+                "val_loss": val_loss
+>>>>>>> d8e694c729ea0e316f52d2a0779d0e55a03b85be
             })
 
             for i, loss in enumerate(fold_losses):
@@ -297,20 +279,21 @@ def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 2
             results.append({
                 'output_dim': output_dim,
                 'batch_size': batch_size,
-                'avg_cv_loss': avg_cv_loss,
-                'fold_losses': fold_losses
+                'val_loss': val_loss
             })
     
     # Find best hyperparameters
-    best_result = min(results, key=lambda x: x['avg_cv_loss'])
+    best_result = min(results, key=lambda x: x['val_loss'])
     print(f"\n\nBest hyperparameters:")
     print(f"Output dimension: {best_result['output_dim']}")
     print(f"Batch size: {best_result['batch_size']}")
-    print(f"Average CV loss: {best_result['avg_cv_loss']:.4f}")
+    print(f"Validation Loss: {best_result['val_loss']:.4f}")
     
-    # Train final model on all training data with best hyperparameters
+    # Train final model on combined train+val data with best hyperparameters
     print("\n\nTraining final model with best hyperparameters...")
-    full_train_dataset = TripletEmbeddingDataset(train_df)
+    # Combine train and validation data for final training
+    train_val_df = pd.concat([train_df, val_df], ignore_index=True)
+    full_train_dataset = TripletEmbeddingDataset(train_val_df)
     test_dataset = TripletEmbeddingDataset(test_df)
     
     train_loader = DataLoader(
@@ -330,12 +313,13 @@ def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 2
     )
     
     # Train final model
+    final_checkpoint_dir = f"checkpoints/final_model_{timestamp}"
     _, final_qry_tower, final_doc_tower = train_model(
         train_loader, 
         test_loader, 
         output_dim=best_result['output_dim'],
         epochs=epochs,
-        checkpoint_dir="checkpoints/final_model"
+        checkpoint_dir=final_checkpoint_dir
     )
     
     # Save final model
@@ -347,7 +331,14 @@ def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 2
             'batch_size': best_result['batch_size']
         }
     }
+<<<<<<< HEAD
     torch.save(final_model, f"checkpoints/final_model/final_model_{timestamp}.pt")
+=======
+    
+    final_model_path = f"{final_checkpoint_dir}/final_model_{timestamp}.pt"
+    torch.save(final_model, final_model_path)
+    print(f"Final model saved at: {final_model_path}")
+>>>>>>> d8e694c729ea0e316f52d2a0779d0e55a03b85be
 
     # Before returning, finish the W&B run
     wandb.finish()
