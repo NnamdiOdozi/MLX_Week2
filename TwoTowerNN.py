@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 tqdm.pandas()
 import wandb
+import datetime
 
 class QryTower(torch.nn.Module):
     def __init__(self, input_dim=128, hidden_dims=[128, 64], output_dim=64):
@@ -70,19 +71,7 @@ class TripletEmbeddingDataset(Dataset):
 # 3. Function to train a model with specific hyperparameters
 def train_model(train_loader, val_loader, output_dim, lr=1e-3, epochs=10, checkpoint_dir="checkpoints", log_wandb=True):
     
-    # Initialize W&B if log_wandb is True and not already initialized
-    if log_wandb and wandb.run is None:  # Check if W&B is already initialized
-        wandb.init(
-            project="twin-tower-model",
-            name=f"train_dim{output_dim}_lr{lr}",
-            config={
-                "output_dim": output_dim,
-                "learning_rate": lr,
-                "epochs": epochs,
-                "batch_size": train_loader.batch_size if hasattr(train_loader, 'batch_size') else None
-            }
-        )
-    
+      
     # Create models
     qryTower = QryTower(output_dim=output_dim)
     docTower = DocTower(output_dim=output_dim)
@@ -217,11 +206,11 @@ def train_model(train_loader, val_loader, output_dim, lr=1e-3, epochs=10, checkp
 
 # 4. Main hyperparameter tuning with cross-validation
 def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 256, 512], n_folds=5, epochs=10):
-    
+    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     # Initialize W&B for the entire tuning process
     wandb.init(
         project="twin-tower-model",
-        name="hyperparameter-tuning",
+        name=f"hyperparameter-tuning {timestamp}",
         config={
             "output_dims": output_dims,
             "batch_sizes": batch_sizes,
@@ -277,7 +266,7 @@ def run_hyperparameter_tuning(df, output_dims=[32, 64, 128], batch_sizes=[128, 2
                 )
                 
                 # Train the model and get validation loss
-                checkpoint_dir = f"checkpoints/dim{output_dim}_batch{batch_size}_fold{fold+1}"
+                checkpoint_dir = f"checkpoints/dim{output_dim}_batch{batch_size}_fold{fold+1}_{timestamp}"
                 val_loss, _, _ = train_model(
                     train_loader, 
                     val_loader, 
