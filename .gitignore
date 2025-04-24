@@ -37,6 +37,7 @@ htmlcov/
 # PyTorch
 *.pt
 !checkpoints/
+!checkpoints/**/*.pt
 *.pth
 *.onnx
 *.csv
