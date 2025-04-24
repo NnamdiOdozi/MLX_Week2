@@ -149,7 +149,7 @@ def train_model(train_loader, val_loader, output_dim, lr=1e-3, epochs=10, checkp
                 neg_sim = torch.nn.functional.cosine_similarity(query_encoded, neg_encoded)
                 
                 # Triplet loss
-                margin = 0.2
+                margin = 0.5 #Coco asked to change it form 0.2
                 loss = torch.clamp(margin - pos_sim + neg_sim, min=0).mean()
                 
                 val_loss += loss.item() * len(query_emb)

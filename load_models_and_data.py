@@ -11,6 +11,7 @@ import math
 from collections import Counter
 from sklearn.feature_extraction.text import TfidfVectorizer
 import rank_bm25
+import torch.nn as nn
 
 # Initialize wandb and login (if not already logged in)
 # wandb.login()  # Uncomment if you need to login
@@ -92,25 +93,67 @@ def load_embeddings(embeddings_path):
     embeddings = torch.load(embeddings_path)
     return embeddings
 
-def text_to_embeddings(text, word_to_idx, embeddings, unknown_token_id=0):
-    """Convert text to token embeddings"""
+def text_to_embeddings(text, word_to_idx, embeddings, unknown_token_id=0, is_query=False):
+    """
+    Convert text to token embeddings with padding and OOV handling
+    
+    Args:
+        text: Input text to convert
+        word_to_idx: Dictionary mapping words to indices
+        embeddings: Embedding matrix
+        unknown_token_id: ID for unknown tokens
+        is_query: Flag to determine max length (query vs document)
+        
+    Returns:
+        padded_embeddings: Padded embedding tensor
+        length: Actual length of sequence before padding
+    """
+    
+    # Define constants
+    MAX_QUERY_LENGTH = 26
+    MAX_DOCUMENT_LENGTH = 201
+    embedding_dim = 100  # Assuming 100-dim embeddings, modify as needed
+    
     # Tokenize the text
     tokens = preprocess_for_inference(text)
     
-    # Convert tokens to indices
-    indices = []
+    # Set max length based on whether this is a query or document
+    max_length = MAX_QUERY_LENGTH if is_query else MAX_DOCUMENT_LENGTH
+    
+    # Convert tokens to indices and create embeddings list
+    token_embeddings_list = []
     for token in tokens:
         # Get the token ID or use unknown token ID if not in vocabulary
         idx = word_to_idx.get(token, unknown_token_id)
-        indices.append(idx)
+        
+        if idx == unknown_token_id:
+            # Create a new random OOV vector for each unknown word
+            oov_vector = torch.randn(embedding_dim) * 0.1  # Random but small vector
+            token_embeddings_list.append(oov_vector)
+        else:
+            # Use the regular embedding
+            token_embeddings_list.append(embeddings[idx])
     
-    # Convert to tensor
-    indices_tensor = torch.tensor(indices, dtype=torch.long)
+    # Stack the embeddings (if we have any)
+    if token_embeddings_list:
+        token_embeddings = torch.stack(token_embeddings_list)
+    else:
+        # Create an empty tensor with the correct shape if no tokens
+        token_embeddings = torch.zeros((0, embedding_dim))
     
-    # Look up embeddings
-    token_embeddings = embeddings[indices_tensor]
+    # Get sequence length
+    length = len(token_embeddings)
     
-    return token_embeddings
+    # Create padded tensor initialized with zeros
+    padded_embeddings = torch.zeros(max_length, embedding_dim)
+    
+    # Copy the embeddings to the padded tensor (only up to max_length)
+    if length > 0:
+        # Only take up to max_length tokens to handle cases where text is too long
+        copy_length = min(length, max_length)
+        padded_embeddings[:copy_length] = token_embeddings[:copy_length]
+    
+    return padded_embeddings, length
 
 
 # Function to calculate cosine similarity between two embeddings
@@ -123,18 +166,26 @@ def calc_cosine_sim(emb1, emb2):
     b = emb2.mean(dim=0)
     return F.cosine_similarity(a.unsqueeze(0), b.unsqueeze(0)).item()
 
-# Function to process a single row and return similarities
-def calculate_similarities(row, word_to_idx, embeddings):
-    """Convert text to token embeddings and calculate similarities"""
-    # Get embeddings
-    query_emb = text_to_embeddings(row['query'], word_to_idx, embeddings)
-    pos_emb = text_to_embeddings(row['positive_passage'], word_to_idx, embeddings) 
-    neg_emb = text_to_embeddings(row['negative_passage'], word_to_idx, embeddings)
-    
+# Function to process a single row and return embeddings with lengths
+def calculate_embeddings(row, word_to_idx, embeddings):
+    """Convert text to token embeddings with padding and return lengths"""
+    # Get embeddings and lengths
+    query_emb, query_length = text_to_embeddings(
+        row['query'], word_to_idx, embeddings, is_query=True
+    )
+    pos_emb, pos_length = text_to_embeddings(
+        row['positive_passage'], word_to_idx, embeddings, is_query=False
+    ) 
+    neg_emb, neg_length = text_to_embeddings(
+        row['negative_passage'], word_to_idx, embeddings, is_query=False
+    )
+
+
+
     # Calculate average embeddings
-    avg_query_emb = query_emb.mean(dim=0).detach().numpy() if query_emb.shape[0] > 0 else np.zeros(embeddings.shape[1])
-    avg_pos_emb = pos_emb.mean(dim=0).detach().numpy() if pos_emb.shape[0] > 0 else np.zeros(embeddings.shape[1])
-    avg_neg_emb = neg_emb.mean(dim=0).detach().numpy() if neg_emb.shape[0] > 0 else np.zeros(embeddings.shape[1])
+    #avg_query_emb = query_emb.mean(dim=0).detach().numpy() if query_emb.shape[0] > 0 else np.zeros(embeddings.shape[1])
+    #avg_pos_emb = pos_emb.mean(dim=0).detach().numpy() if pos_emb.shape[0] > 0 else np.zeros(embeddings.shape[1])
+    #avg_neg_emb = neg_emb.mean(dim=0).detach().numpy() if neg_emb.shape[0] > 0 else np.zeros(embeddings.shape[1])
     
     # Calculate similarities
     # if query_emb.shape[0] > 0 and pos_emb.shape[0] > 0:
@@ -161,23 +212,53 @@ def calculate_similarities(row, word_to_idx, embeddings):
     # else:
     #     pos_neg_sim = 0.0
     
-    # Create a Series with both similarities and average embeddings
+     # Create a Series with embeddings and lengths
     result = pd.Series({
-        'avg_query_embedding': avg_query_emb,
-        'avg_pos_embedding': avg_pos_emb,
-        'avg_neg_embedding': avg_neg_emb,
-        #'query_pos_sim': query_pos_sim,
-        #'query_neg_sim': query_neg_sim,
-        #'pos_neg_sim': pos_neg_sim
-        
+        'query_emb': query_emb,
+        'query_length': query_length,
+        'pos_emb': pos_emb,
+        'pos_length': pos_length,
+        'neg_emb': neg_emb,
+        'neg_length': neg_length,
     })
     
     return result
 
 
-
-
-
+def create_packed_batch(embeddings_df):
+    """
+    Creates packed sequences for batched processing in an RNN
+    
+    Args:
+        embeddings_df: DataFrame containing query_emb, pos_emb, neg_emb and their lengths
+        
+    Returns:
+        packed_queries: PackedSequence for queries
+        packed_positives: PackedSequence for positive documents
+        packed_negatives: PackedSequence for negative documents
+    """
+    # Stack all embeddings in the batch
+    queries = torch.stack(embeddings_df['query_emb'].tolist())
+    positives = torch.stack(embeddings_df['pos_emb'].tolist())
+    negatives = torch.stack(embeddings_df['neg_emb'].tolist())
+    
+    # Get lengths
+    query_lengths = torch.tensor(embeddings_df['query_length'].tolist())
+    pos_lengths = torch.tensor(embeddings_df['pos_length'].tolist())
+    neg_lengths = torch.tensor(embeddings_df['neg_length'].tolist())
+    
+    # Pack sequences
+    packed_queries = nn.utils.rnn.pack_padded_sequence(
+        queries, query_lengths.cpu(), batch_first=True, enforce_sorted=False
+    )
+    packed_positives = nn.utils.rnn.pack_padded_sequence(
+        positives, pos_lengths.cpu(), batch_first=True, enforce_sorted=False
+    )
+    packed_negatives = nn.utils.rnn.pack_padded_sequence(
+        negatives, neg_lengths.cpu(), batch_first=True, enforce_sorted=False
+    )
+    
+    return packed_queries, packed_positives, packed_negatives
 
 
 def main():
