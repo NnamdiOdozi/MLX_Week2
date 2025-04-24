@@ -37,7 +37,7 @@ htmlcov/
 *.pt
 *.pth
 *.onnx
-*.csv
+
 
 # Jupyter Notebooks
 
