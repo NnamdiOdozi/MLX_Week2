@@ -271,6 +271,8 @@ def train_gru_model(train_loader, val_loader, embedding_dim=100,
         optimizer, mode='min', factor=0.5, patience=2, verbose=True
     )
     
+    #In the train_gru_model function, after creating the optimizer adding gradient clipping to prevent exploding gradients and NaNs:
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
     # Ensure checkpoint directory exists
     os.makedirs(checkpoint_dir, exist_ok=True)
     
@@ -335,6 +337,7 @@ def train_gru_model(train_loader, val_loader, embedding_dim=100,
             # Backward pass
             optimizer.zero_grad()
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
             
             train_loss += loss.item() * len(query_embs)
@@ -421,7 +424,7 @@ def train_gru_model(train_loader, val_loader, embedding_dim=100,
                 "train_loss": avg_train_loss,
                 "val_loss": avg_val_loss,
                 "learning_rate": optimizer.param_groups[0]['lr']
-            })
+            }, step=epoch + 1)
         
         # Save best model
         if avg_val_loss < best_val_loss:
@@ -651,6 +654,15 @@ def run_hyperparameter_tuning(df, output_dims=[100], batch_sizes=[512], gru_hidd
 
     # Log final model to W&B
     if log_wandb:
+        # Initialize a new wandb run specifically for the final model
+        import wandb
+        wandb.init(
+            project="gru-twin-tower-model",
+            name=f"final_model_{timestamp}",
+            config=best_result,
+            reinit=True
+        )
+        
         final_model_artifact = wandb.Artifact(
             name=f"final_gru_model_{timestamp}", 
             type="model",
