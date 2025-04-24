@@ -220,9 +220,12 @@ class EmbeddingTripletDataset(Dataset):
         neg_emb = row['neg_emb']
         
         return {
-            'query_emb': query_emb,
-            'pos_emb': pos_emb,
-            'neg_emb': neg_emb
+            'query_emb': row['query_emb'],
+            'query_length': row['query_length'],
+            'pos_emb': row['pos_emb'],
+            'pos_length': row['pos_length'],
+            'neg_emb': row['neg_emb'],
+            'neg_length': row['neg_length']
         }
 
 
@@ -290,10 +293,18 @@ def train_gru_model(train_loader, val_loader, embedding_dim=100,
             neg_embs = batch['neg_emb']
             
             # Prepare embeddings (pad and get lengths) - For now just set these to the inputs
-            query_embeddings, query_lengths = query_embs #model.prepare_embeddings(query_embs, max_query_length)
-            pos_embeddings, pos_lengths = pos_embs #model.prepare_embeddings(pos_embs, max_doc_length)
-            neg_embeddings, neg_lengths = neg_embs #model.prepare_embeddings(neg_embs, max_doc_length)
+            #query_embeddings, query_lengths = query_embs, query_lengths #model.prepare_embeddings(query_embs, max_query_length)
+            #pos_embeddings, pos_lengths = pos_embs, pos_lengths #model.prepare_embeddings(pos_embs, max_doc_length)
+            #neg_embeddings, neg_lengths = neg_embs, neg_lengths #model.prepare_embeddings(neg_embs, max_doc_length)
             
+            query_embeddings = batch['query_emb']
+            query_lengths = batch['query_length']
+            pos_embeddings = batch['pos_emb']
+            pos_lengths = batch['pos_length']
+            neg_embeddings = batch['neg_emb']
+            neg_lengths = batch['neg_length']
+
+
             # Move data to device
             query_embeddings = query_embeddings.to(device)
             query_lengths = query_lengths.to(device)
@@ -342,11 +353,15 @@ def train_gru_model(train_loader, val_loader, embedding_dim=100,
                 neg_embs = batch['neg_emb']
                 
                 # Prepare embeddings
-                query_embeddings, query_lengths = query_embs #model.prepare_embeddings(query_embs, max_query_length)
-                pos_embeddings, pos_lengths = pos_embs #model.prepare_embeddings(pos_embs, max_doc_length)
-                neg_embeddings, neg_lengths = neg_embs#model.prepare_embeddings(neg_embs, max_doc_length)
-                
+                query_embeddings = batch['query_emb']
+                query_lengths = batch['query_length']
+                pos_embeddings = batch['pos_emb']
+                pos_lengths = batch['pos_length']
+                neg_embeddings = batch['neg_emb']
+                neg_lengths = batch['neg_length']
+                # Prepare embeddings (pad and get lengths)                
                 # Move data to device
+                
                 query_embeddings = query_embeddings.to(device)
                 query_lengths = query_lengths.to(device)
                 pos_embeddings = pos_embeddings.to(device)
@@ -416,7 +431,7 @@ def train_gru_model(train_loader, val_loader, embedding_dim=100,
     
     return best_val_loss, model
 
-def run_hyperparameter_tuning(df, output_dims=[128], batch_sizes=[512], gru_hidden_dims=[128], 
+def run_hyperparameter_tuning(df, output_dims=[100], batch_sizes=[512], gru_hidden_dims=[128], 
                          num_layers=[1], dropouts=[0.1], learning_rates=[1e-3], 
                          epochs=10, log_wandb=True):
     """
@@ -465,14 +480,22 @@ def run_hyperparameter_tuning(df, output_dims=[128], batch_sizes=[512], gru_hidd
     
     # Custom collate function for embedding sequences
     def collate_embedding_batches(batch):
-        query_embs = [item['query_emb'] for item in batch]
-        pos_embs = [item['pos_emb'] for item in batch]
-        neg_embs = [item['neg_emb'] for item in batch]
+        query_embs = torch.stack([item['query_emb'] for item in batch])
+        query_lengths = torch.tensor([item['query_length'] for item in batch])
+        
+        pos_embs = torch.stack([item['pos_emb'] for item in batch])
+        pos_lengths = torch.tensor([item['pos_length'] for item in batch])
+        
+        neg_embs = torch.stack([item['neg_emb'] for item in batch])
+        neg_lengths = torch.tensor([item['neg_length'] for item in batch])
         
         return {
             'query_emb': query_embs,
+            'query_length': query_lengths,
             'pos_emb': pos_embs,
-            'neg_emb': neg_embs
+            'pos_length': pos_lengths,
+            'neg_emb': neg_embs,
+            'neg_length': neg_lengths
         }
     
     # Loop through hyperparameter combinations
@@ -482,6 +505,27 @@ def run_hyperparameter_tuning(df, output_dims=[128], batch_sizes=[512], gru_hidd
                 for n_layers in num_layers:
                     for dropout in dropouts:
                         for lr in learning_rates:
+                            
+                            # Initialize a new wandb run for each hyperparameter combination
+                            if log_wandb:
+                                import wandb
+                                run_name = f"dim{output_dim}_batch{batch_size}_hidden{gru_hidden_dim}_layers{n_layers}_{timestamp}"
+                                wandb.init(
+                                    project="gru-twin-tower-model",
+                                    name=run_name,
+                                    config={
+                                        "output_dim": output_dim,
+                                        "batch_size": batch_size,
+                                        "gru_hidden_dim": gru_hidden_dim,
+                                        "num_layers": n_layers,
+                                        "dropout": dropout,
+                                        "learning_rate": lr,
+                                        "epochs": epochs
+                                    },
+                                    reinit=True  # Allow multiple wandb runs
+                                )
+             
+                           
                             print(f"\n\n{'-'*80}")
                             print(f"Training with: output_dim={output_dim}, batch_size={batch_size}, " + 
                                   f"gru_hidden_dim={gru_hidden_dim}, num_layers={n_layers}, " + 
@@ -524,20 +568,12 @@ def run_hyperparameter_tuning(df, output_dims=[128], batch_sizes=[512], gru_hidd
                                 lr=lr,
                                 epochs=epochs,
                                 checkpoint_dir=checkpoint_dir,
-                                log_wandb=False  # We'll log at this level instead
+                                log_wandb=True  # We'll log at this level instead
                             )
                             
                             # Log the results
                             if log_wandb:
-                                wandb.log({
-                                    "output_dim": output_dim,
-                                    "batch_size": batch_size,
-                                    "gru_hidden_dim": gru_hidden_dim,
-                                    "num_layers": n_layers,
-                                    "dropout": dropout,
-                                    "learning_rate": lr,
-                                    "val_loss": val_loss
-                                })
+                                wandb.finish()
                             
                             # Record result
                             results.append({

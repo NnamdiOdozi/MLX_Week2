@@ -1,0 +1,1 @@
+{"val_loss":0.11709452103632964,"_timestamp":1.745508176211316e+09,"dropout":0.1,"_step":0,"num_layers":1,"gru_hidden_dim":100,"learning_rate":0.001,"_wandb":{"runtime":105},"batch_size":512,"_runtime":49.077448765,"output_dim":100}
