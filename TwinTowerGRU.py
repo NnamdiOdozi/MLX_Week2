@@ -7,6 +7,7 @@ import os
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
+import torch.onnx
 
 
 class QryTower(torch.nn.Module):
@@ -271,6 +272,11 @@ def train_gru_model(train_loader, val_loader, embedding_dim=100,
         optimizer, mode='min', factor=0.5, patience=2, verbose=True
     )
     
+    # Add wandb.watch here
+    if log_wandb:
+        import wandb
+        wandb.watch(model, log='all', log_freq=100)  # Log gradients and parameters
+
     #In the train_gru_model function, after creating the optimizer adding gradient clipping to prevent exploding gradients and NaNs:
     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
     # Ensure checkpoint directory exists
@@ -670,6 +676,25 @@ def run_hyperparameter_tuning(df, output_dims=[100], batch_sizes=[512], gru_hidd
         )
         
         final_model_artifact.add_file(final_model_path)
+        
+
+        # Create ONNX model and add directly to artifact
+        device = next(final_model.parameters()).device  # Get device from model
+        dummy_query = torch.zeros(1, 26, 100).to(next(final_model.parameters()).device)
+        dummy_query_lengths = torch.tensor([10]).to(device)
+        dummy_doc = torch.zeros(1, 201, 100).to(device) 
+        dummy_doc_lengths = torch.tensor([50]).to(device)
+
+        # Export directly to a temporary file
+        onnx_path = f"{final_checkpoint_dir}/model.onnx"
+        torch.onnx.export(final_model, (dummy_query, dummy_query_lengths, dummy_doc, dummy_doc_lengths), 
+                        onnx_path, input_names=['query', 'query_length', 'document', 'document_length'],
+                        output_names=['query_vector', 'document_vector'])
+
+        # Add to artifact
+        final_model_artifact.add_file(onnx_path)
+        
+        
         wandb.log_artifact(final_model_artifact)
         
         # Finish the W&B run
